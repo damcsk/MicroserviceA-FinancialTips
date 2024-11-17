@@ -116,7 +116,6 @@ def create_example_entries():
         ("How to Build Your Financial Safety Net", "https://example.com/financial-safety-net", "Saving", 5, 1),
         ("How to Plan for a Comfortable Retirement", "https://example.com/comfortable-retirement", "Retirement", 5, 1),
         ("The Basics of Real Estate Tax Deductions", "https://example.com/real-estate-deductions", "Taxes", 5, 1),
-
     ]
 
     # Insert example tips into the 'tips' table
