@@ -7,31 +7,36 @@ FINANCIAL_TIPS = [
         "tip": "Create a monthly budget",
         "link": "https://example.com/budgeting",
         "category": "Budgeting",
-        "tip_id": "0001"
+        "tip_id": "0001",
+        "ratings": [5,4,4]
      },
     {
         "tip": "Start an emergency fund",
         "link": "https://example.com/emergency-fund",
         "category": "Savings",
-        "tip_id": "0002"
+        "tip_id": "0002",
+        "ratings": [5,5]
     },
     {
         "tip": "Pay off high-interest debt first",
         "link": "https://example.com/debt-management",
         "category": "Debt Management",
-        "tip_id": "0003"
+        "tip_id": "0003",
+        "ratings": [3]
     },
     {
         "tip": "Invest in low-cost index funds",
         "link": "https://example.com/investing",
         "category": "Investing",
-        "tip_id": "0004"
+        "tip_id": "0004",
+        "ratings": []
     },
     {
         "tip": "Track your expenses weekly",
         "link": "https://example.com/track-expenses",
         "category": "Budgeting",
-        "tip_id": "0005"
+        "tip_id": "0005",
+        "ratings": [4]
     },
 ]
 
@@ -66,6 +71,28 @@ while True:
         response = {
             "tips": filtered_tips[:3]
         }
+    elif operation == "rate_tip":
+        tip_id = request.get("tip_id")
+        rating = request.get("rating")
+
+        # Find the tip by ID
+        tip = next((tip for tip in FINANCIAL_TIPS if tip["tip_id"] == tip_id), None)
+
+        if tip:
+            if 0 <= rating <= 5:
+                # Update ratings and calculate new average
+                tip["ratings"].append(rating)
+                average_rating = sum(tip["ratings"]) / len(tip["ratings"])
+
+                response = {
+                    "message": "Rating submitted successfully",
+                    "tip_id": tip_id,
+                    "new_average_rating": round(average_rating, 2),
+                }
+            else:
+                response = {"message": "Invalid rating"}
+        else:
+            response = {"message": "Invalid tip_id or tip_id not found"}
 
     # Send the response
     socket.send_json(response)
