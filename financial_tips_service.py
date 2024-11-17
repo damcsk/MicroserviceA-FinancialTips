@@ -108,7 +108,8 @@ def handle_rate_tip(request, session_id):
             if tip:
                 # Check if the tip has already been rated in this session
                 if tip_id in sessions[session_id]["rated_tips"]:
-                    return {"message": "You have already rated this tip"}
+                    return {"message": "You have already rated this tip",
+                            "session_id": session_id}
 
                 # Calculate the new average rating
                 current_avg, count = tip
@@ -135,9 +136,11 @@ def handle_rate_tip(request, session_id):
                 return {"message": "Invalid tip id or tip id not found"}
         except sqlite3.DatabaseError as e:
             print(f"Error processing rating: {e}")
-            return {"message": "Error processing rating"}
+            return {"message": "Error processing rating",
+                    "session_id": session_id}
     else:
-        return {"message": "Invalid rating"}
+        return {"message": "Invalid rating",
+                "session_id": session_id}
 
 
 # Handle get_tip_by_id operation
@@ -163,13 +166,14 @@ def handle_get_tip_by_id(request, session_id):
 
 
 # Handle insert_tip operation
-def handle_insert_tip(request):
+def handle_insert_tip(request, session_id):
     tip_name = request.get("tip")
     tip_link = request.get("link")
     category = request.get("category")
 
     if not tip_name or not tip_link or not category:
-        return {"message": "Missing required fields"}
+        return {"message": "Missing required fields",
+                "session_id": session_id}
 
     tip_id = str(uuid.uuid4())
     cursor.execute("""
@@ -178,11 +182,14 @@ def handle_insert_tip(request):
     """, (tip_id, tip_name, tip_link, category))
     conn.commit()
 
-    return {"message": "Tip inserted successfully", "tip_id": tip_id}
+    return {"message": "Tip inserted successfully",
+            "tip_id": tip_id,
+            "session_id": session_id
+            }
 
 
 # Handle delete_tip operation
-def handle_delete_tip(request):
+def handle_delete_tip(request, session_id):
     tip_id = request.get("tip_id")
 
     if not tip_id:
@@ -192,9 +199,13 @@ def handle_delete_tip(request):
     conn.commit()
 
     if cursor.rowcount > 0:
-        return {"message": "Tip deleted successfully", "tip_id": tip_id}
+        return {"message": "Tip deleted successfully",
+                "tip_id": tip_id,
+                "session_id": session_id
+                }
     else:
-        return {"message": "Tip ID not found"}
+        return {"message": "Tip ID not found",
+                "session_id": session_id}
 
 
 # Handle requests
@@ -224,9 +235,9 @@ while True:
     elif operation == "get_tip_by_id":
         response = handle_get_tip_by_id(request, session_id)
     elif operation == "insert_tip":
-        response = handle_insert_tip(request)
+        response = handle_insert_tip(request, session_id)
     elif operation == "delete_tip":
-        response = handle_delete_tip(request)
+        response = handle_delete_tip(request, session_id)
 
     # Send the response
     socket.send_json(response)

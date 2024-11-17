@@ -117,6 +117,54 @@ def test_rate_and_get_updated_tip():
     print(f"Updated Tip: {updated_tip['tip']} - New Rating: {updated_tip['average_rating']}")
 
 
+def test_insert_tip():
+    """Test inserting a new tip."""
+    # Prepare the request for inserting a new tip
+    request = {
+        "operation": "insert_tip",
+        "tip": "Invest in stocks for long-term growth",
+        "link": "https://example.com/stocks-tips",
+        "category": "Investing"
+    }
+    socket.send_json(request)
+    response = socket.recv_json()
+    print("Response (insert tip):", json.dumps(response, indent=4))
+
+    # Check if the response contains the expected success message
+    assert response["message"] == "Tip inserted successfully", "Tip insertion failed"
+    assert "tip_id" in response, "Response should contain 'tip_id' key"
+    assert response["session_id"] is not None, "Response should contain 'session_id'"
+
+
+def test_delete_tip():
+    """Test deleting a tip."""
+    # Insert a new tip to be deleted later
+    insert_request = {
+        "operation": "insert_tip",
+        "tip": "Save money by budgeting",
+        "link": "https://example.com/budgeting-tips",
+        "category": "Finance"
+    }
+    socket.send_json(insert_request)
+    insert_response = socket.recv_json()
+    tip_id_to_delete = insert_response["tip_id"]  # Get the inserted tip's ID
+
+    # Now, delete the inserted tip
+    delete_request = {
+        "operation": "delete_tip",
+        "tip_id": tip_id_to_delete
+    }
+    socket.send_json(delete_request)
+    delete_response = socket.recv_json()
+    print("Response (delete tip):", json.dumps(delete_response, indent=4))
+
+    # Check if the response confirms the tip deletion
+    assert delete_response["message"] == "Tip deleted successfully", "Tip deletion failed"
+    assert delete_response["tip_id"] == tip_id_to_delete, "Deleted tip ID does not match"
+    assert delete_response["session_id"] is not None, "Response should contain 'session_id'"
+
+
+
 if __name__ == "__main__":
     print("Testing Financial Tips Microservice...")
 
@@ -127,6 +175,8 @@ if __name__ == "__main__":
         test_rate_tip_invalid_rating()
         test_invalid_operation()
         test_rate_and_get_updated_tip()
+        test_insert_tip()
+        test_delete_tip()
 
         print("\nAll tests passed!")
     except AssertionError as e:
