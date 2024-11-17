@@ -140,6 +140,24 @@ Example Response for an invalid request
         "session_id": "abc123"
     }
 
+## Database Instructions
+
+The microservice currently includes the financial_tips.db, a sqllite database. This is populated by dummy article names and links to non-existant articles.
+
+To create a new database, tools have been included to help: db_seed.py in the root directory, and FormatDBSeedData.xlsx in the seed_tool directory
+
+1. Delete the database, if no longer wanted/needed
+2. Use the excel file tool to generate the correct DB seed data based on you article names, links, categories, ratings, and ratings counts. The db_seed.py formatting column (column F) has a simple excel formula that will format the article data for you.
+3. Open the db_seed.py file and copy/paste the formatted article data into the example_tips variable (paste the data between the brackets, creating a list)
+4. Run the db_seed.py file. It will create a new financial_tips.db based on the example_tips variable data you provided.
+
+**Example variable data:**
+
+    example_tips = [
+        ("Save for Retirement Early to Maximize Compound Interest", "https://example.com/retirement-early", "Retirement", 5, 1),
+        ("How to Build a Solid Emergency Fund", "https://example.com/emergency-fund", "Saving", 3.5, 25),
+        ("Understanding the Importance of Your Net Worth", "https://example.com/net-worth", "Finance", 1.25, 15),
+    ]
 
 ## UML Sequence Diagram
 
