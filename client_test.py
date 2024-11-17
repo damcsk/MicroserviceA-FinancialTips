@@ -1,22 +1,18 @@
 import zmq
-import json
 
-# Setup ZeroMQ REQ socket (for sending requests)
+# Setup ZeroMQ REQ socket
 context = zmq.Context()
-socket = context.socket(zmq.REQ)  # REQ socket for sending requests
-socket.connect("tcp://localhost:5555")  # Connecting to the microservice
+socket = context.socket(zmq.REQ)
+socket.connect("tcp://localhost:5555")
 
-# Create a test request
-request_data = {
-    "operation": "get_tips",
-    "user_id": "12345"
-}
-
-# Send the request
+# Test 1: Request all tips
+request_data = {"operation": "get_tips"}
 socket.send_json(request_data)
-
-# Receive the response
 response = socket.recv_json()
+print("Response (all tips):", response)
 
-# Print the response
-print("Received response:", response)
+# Test 2: Request tips filtered by category
+request_data = {"operation": "get_tips", "category": "Budgeting"}
+socket.send_json(request_data)
+response = socket.recv_json()
+print("Response (filtered by Budgeting):", response)
