@@ -1,5 +1,4 @@
 import zmq
-import json
 import collections
 import random
 import uuid

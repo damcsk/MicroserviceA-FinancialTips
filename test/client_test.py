@@ -52,7 +52,7 @@ def test_rate_tip_valid():
 def test_rate_tip_invalid_rating():
     """Test submitting an invalid rating."""
     # Use the first tip from the Investing category for invalid rating
-    get_tips_request = {"operation": "get_tips", "category": "Investing"}
+    get_tips_request = {"operation": "get_tips", "category": "Investment"}
     socket.send_json(get_tips_request)
     tips_response = socket.recv_json()
     first_tip_id = tips_response["tips"][0]["tip_id"]
