@@ -1,64 +1,133 @@
 import zmq
+import json
 
 # Setup ZeroMQ REQ socket
 context = zmq.Context()
 socket = context.socket(zmq.REQ)
 socket.connect("tcp://localhost:5555")
 
-# Test 1: Request all tips
-request_data = {"operation": "get_tips"}
-socket.send_json(request_data)
-response = socket.recv_json()
-print("Response (all tips):", response)
 
-# Test 2: Request tips filtered by category
-request_data = {"operation": "get_tips", "category": "Budgeting"}
-socket.send_json(request_data)
-response = socket.recv_json()
-print("Response (filtered by Budgeting):", response)
-
-# Test rate_tip operation
-rate_tip_request = {
-    "operation": "rate_tip",
-    "tip_id": "0001",
-    "rating": 5,
-}
-socket.send_json(rate_tip_request)
-rate_tip_response = socket.recv_json()
-print("Response (rate tip):", rate_tip_response)
-
-
-def test_get_tips():
-    request = {
-        "operation": "get_tips",
-        "category": "finance"
-    }
+def test_get_tips_no_category():
+    """Test fetching tips with no category; minimal request"""
+    request = {"operation": "get_tips"}
     socket.send_json(request)
     response = socket.recv_json()
-    print("get_tips response:", response)
+    print("Response (no category tips):", json.dumps(response, indent=4))
+    assert "tips" in response, "Response should contain 'tips' key"
+    assert isinstance(response["tips"], list), "'tips' should be a list"
+    assert len(response["tips"]) == 3, "Should return 3 tips (unless db has less # of tips)"
 
 
-def test_rate_tip():
+def test_get_tips_filtered_by_category():
+    """Test fetching tips filtered by category."""
+    request = {"operation": "get_tips", "category": "Finance"}
+    socket.send_json(request)
+    response = socket.recv_json()
+    print("Response (filtered by Finance):", json.dumps(response, indent=4))
+    assert "tips" in response, "Response should contain 'tips' key"
+    for tip in response["tips"]:
+        assert tip["category"] == "Finance", "Each tip should match the requested category"
+
+
+def test_rate_tip_valid():
+    """Test submitting a valid rating."""
+    # Use the first tip from the Finance category for rating
+    get_tips_request = {"operation": "get_tips", "category": "Finance"}
+    socket.send_json(get_tips_request)
+    tips_response = socket.recv_json()
+    first_tip_id = tips_response["tips"][0]["tip_id"]
+
     request = {
         "operation": "rate_tip",
-        "tip_id": "1",
-        "rating": 4
+        "tip_id": first_tip_id,
+        "rating": 5
     }
     socket.send_json(request)
     response = socket.recv_json()
-    print("rate_tip response:", response)
+    print("Response (rate tip):", json.dumps(response, indent=4))
+    assert response["message"] == "Rating submitted successfully", "Rating should be successful"
+    assert "new_average_rating" in response, "Response should include new average rating"
+
+
+def test_rate_tip_invalid_rating():
+    """Test submitting an invalid rating."""
+    # Use the first tip from the Investing category for invalid rating
+    get_tips_request = {"operation": "get_tips", "category": "Investing"}
+    socket.send_json(get_tips_request)
+    tips_response = socket.recv_json()
+    first_tip_id = tips_response["tips"][0]["tip_id"]
+
+    request = {
+        "operation": "rate_tip",
+        "tip_id": first_tip_id,
+        "rating": 6  # Invalid rating
+    }
+    socket.send_json(request)
+    response = socket.recv_json()
+    print("Response (invalid rating):", json.dumps(response, indent=4))
+    assert response["message"] == "Invalid rating", "Server should reject invalid ratings"
 
 
 def test_invalid_operation():
-    request = {
-        "operation": "invalid_operation"
-    }
+    """Test sending an invalid operation."""
+    request = {"operation": "invalid_operation"}
     socket.send_json(request)
     response = socket.recv_json()
-    print("invalid_operation response:", response)
+    print("Response (invalid operation):", json.dumps(response, indent=4))
+    assert response["message"] == "Invalid operation", "Server should reject invalid operations"
+
+
+def test_rate_and_get_updated_tip():
+    """Test retrieving a tip, rating it, and verifying the updated rating."""
+    # Step 1: Get tips with no category filter
+    request = {"operation": "get_tips"}
+    socket.send_json(request)
+    response = socket.recv_json()
+    print("Response (get tips):", response)
+
+    assert "tips" in response, "Response should contain 'tips' key"
+    assert len(response["tips"]) > 0, "There should be at least one tip in the response"
+
+    # Step 2: Display the first tip and its associated rating
+    first_tip = response["tips"][0]
+    print(f"Displaying Tip: {first_tip['tip']} - Rating: {first_tip.get('average_rating', 'No rating')}")
+
+    # Step 3: Rate the tip
+    rate_tip_request = {
+        "operation": "rate_tip",
+        "tip_id": first_tip["tip_id"],  # Get the ID from the first tip
+        "rating": 5
+    }
+    socket.send_json(rate_tip_request)
+    rate_tip_response = socket.recv_json()
+    print("Response (rate tip):", rate_tip_response)
+    assert rate_tip_response["message"] == "Rating submitted successfully", "Rating should be successful"
+
+    # Step 4: Retrieve the same tip again to check if the rating was updated
+    get_tip_request = {
+        "operation": "get_tip_by_id",
+        "tip_id": first_tip["tip_id"]
+    }
+    socket.send_json(get_tip_request)
+    get_tip_response = socket.recv_json()
+    print("Response (get updated tip):", get_tip_response)
+
+    assert "tip" in get_tip_response, "Response should contain 'tip' key"
+    updated_tip = get_tip_response["tip"]
+    print(f"Updated Tip: {updated_tip['tip']} - New Rating: {updated_tip['average_rating']}")
 
 
 if __name__ == "__main__":
-    test_get_tips()
-    test_rate_tip()
-    test_invalid_operation()
+    print("Testing Financial Tips Microservice...")
+
+    try:
+        test_get_tips_no_category()
+        test_get_tips_filtered_by_category()
+        test_rate_tip_valid()
+        test_rate_tip_invalid_rating()
+        test_invalid_operation()
+        test_rate_and_get_updated_tip()
+
+        print("\nAll tests passed!")
+    except AssertionError as e:
+        print("\nTest failed:", e)
