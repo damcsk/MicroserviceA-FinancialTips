@@ -9,7 +9,7 @@ import sqlite3
 conn = sqlite3.connect("financial_tips.db")
 cursor = conn.cursor()
 
-# Create tables if not exist
+# Create tables if it does not exist
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS tips (
         tip_id TEXT PRIMARY KEY,
@@ -22,7 +22,8 @@ cursor.execute("""
 """)
 conn.commit()
 
-# In-memory session tracking
+# In-memory session tracking - not the best, but without user ids and logins this is what I
+# decided to go with
 sessions = {}
 
 # Setup ZeroMQ REQ socket
@@ -37,13 +38,19 @@ print("Financial Tips Microservice is running...")
 def get_filtered_tips(category=None):
     try:
         if category:
+            # Filter tips based on category
             cursor.execute("SELECT * FROM tips WHERE category = ?", (category,))
         else:
+            # Get all tips if no category selected
+            # Might want to rethink as DB scales
             cursor.execute("SELECT * FROM tips")
+
+        # Reads all records into memory, and then returns that list
         rows = cursor.fetchall()
         return [{"tip_id": row[0], "tip": row[1], "link": row[2], "category": row[3],
                  "average_rating": row[4], "rating_count": row[5]} for row in rows]
     except sqlite3.DatabaseError as e:
+        # TODO: more robust error handling
         print(f"Error fetching tips: {e}")
         return []
 
@@ -58,6 +65,7 @@ while True:
     response = {"message": "Invalid operation"}
 
     # Generate a session ID for each request. If not provided, it's a new session
+    # Not quite familiar enough with UUID - need to study further
     session_id = request.get("session_id") or str(uuid.uuid4())
 
     # Initialize session data if it's a new session
@@ -68,14 +76,25 @@ while True:
         }
 
     if operation == "get_tips":
-        category = request.get("category")  # Optional category filter
+        category = request.get("category")
 
-        # Filter tips based on the requested category, or return all tips
+        # Filter tips based on the requested category, or return all tips if no category selected
         filtered_tips = get_filtered_tips(category)
 
         # Filter out tips already shown in this session
-        new_tips = [tip for tip in filtered_tips
-                    if tip["tip_id"] not in [shown_tip["tip_id"] for shown_tip in sessions[session_id]["shown_tips"]]]
+        # Create an empty list to store the new tips
+        new_tips = []
+
+        # Get the list of IDs of the tips that have already been shown
+        shown_tip_ids = []
+        for shown_tip in sessions[session_id]["shown_tips"]:
+            shown_tip_ids.append(shown_tip["tip_id"])
+
+        # Go through each tip in filtered_tips
+        for tip in filtered_tips:
+            # Check if the tip's ID is not in the list of shown tip IDs
+            if tip["tip_id"] not in shown_tip_ids:
+                new_tips.append(tip)  # Add the tip to the new_tips list
 
         # If fewer than 3 unique tips are available, select more from the filtered list
         if len(new_tips) < 3:
@@ -90,7 +109,8 @@ while True:
 
         # Respond with the selected tips
         response = {
-            "tips": [{"tip": tip["tip"], "link": tip["link"], "category": tip["category"]} for tip in selected_tips]
+            "tips": [{"tip": tip["tip"], "link": tip["link"], "category": tip["category"]} for tip in selected_tips],
+            "session_id": session_id
         }
 
     # Handle "rate_tip" operation
@@ -129,7 +149,7 @@ while True:
                             "new_average_rating": round(new_avg, 2),
                         }
                 else:
-                    response = {"message": "Invalid tip_id or tip_id not found"}
+                    response = {"message": "Invalid tip id or tip id not found"}
             except sqlite3.DatabaseError as e:
                 print(f"Error processing rating: {e}")
                 response = {"message": "Error processing rating"}
