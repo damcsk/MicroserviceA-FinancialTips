@@ -163,9 +163,10 @@ To create a new database, tools have been included to help: db_seed.py in the ro
 
 Below is a UML sequence diagram that illustrates the flow of requesting and receiving data from the microservice:
 
-
+![UML_Sequence](https://github.com/user-attachments/assets/b5bbf7d8-fc5d-47d3-9235-bd6c4a683464)
 
 ## Important Notes
 
     Session Management: Each client interaction is tracked by a session ID. If no session ID is provided, a new one is created.
     Error Handling: If an operation fails (e.g., invalid tip ID), the server will return an appropriate error message.
+    Article Links: Article links currently do not lead to any actual articles
