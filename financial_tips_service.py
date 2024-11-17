@@ -38,8 +38,8 @@ FINANCIAL_TIPS = [
 
 # Setup ZeroMQ REQ socket (for sending requests)
 context = zmq.Context()
-socket = context.socket(zmq.REQ)  # REQ socket for sending requests
-socket.connect("tcp://localhost:5555")  # Connecting to the microservice
+socket = context.socket(zmq.REP)
+socket.bind("tcp://*:5555")
 
 print("Financial Tips Microservice is running...")
 
