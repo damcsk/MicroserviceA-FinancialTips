@@ -87,6 +87,8 @@ To insert a new tip:
 
 After you send a request, the server will process it and respond with a JSON object. The response will include the requested data, or a message indicating the result of the operation.
 
+Additionally, every response will include the current session id. In order to diversify the tips provided, the session id should be saved and used in any future requests for a persistent session, as well as to prevent a user from rating an article multiple times in a session.
+
 ### Response Structure:
 
 The response will be a JSON object with the following keys:
