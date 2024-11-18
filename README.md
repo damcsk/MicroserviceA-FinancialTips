@@ -32,7 +32,15 @@ The request should be a JSON object with the following keys:
     - link (Required for insert_tip): A link associated with the tip.
 
 
-### Example Request
+### Example Requests
+
+Requests will use json objects sent to the connected zmq socket
+
+    request = {"operation": "get_tips"}
+    socket.send_json(request)
+    response = socket.recv_json()
+
+**Request json objects examples below:**
 
 To request tips a random sample of tips:
 
