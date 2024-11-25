@@ -33,23 +33,19 @@ socket.bind("tcp://*:5555")
 print("Financial Tips Microservice is running...")
 
 
-# Function to load tips from the database
+# Function that fetchs all tips or the tips matching the filter value from the database 
 def get_filtered_tips(category=None):
     try:
         if category:
-            # Filter tips based on category
             cursor.execute("SELECT * FROM tips WHERE category = ?", (category,))
         else:
-            # Get all tips if no category selected
-            # Might want to rethink as DB scales
             cursor.execute("SELECT * FROM tips")
-
+            
         # Reads all records into memory, and then returns that list
         rows = cursor.fetchall()
         return [{"tip_id": row[0], "tip": row[1], "link": row[2], "category": row[3],
                  "average_rating": row[4], "rating_count": row[5]} for row in rows]
     except sqlite3.DatabaseError as e:
-        # TODO: more robust error handling
         print(f"Error fetching tips: {e}")
         return []
 
@@ -58,17 +54,12 @@ def get_filtered_tips(category=None):
 def handle_get_tips(request, session_id):
     category = request.get("category")
     filtered_tips = get_filtered_tips(category)
-
-    # Filter out tips already shown in this session
-    # Create an empty list to store the new tips
     new_tips = []
 
     # Get the list of IDs of the tips that have already been shown
     shown_tip_ids = [shown_tip["tip_id"] for shown_tip in sessions[session_id]["shown_tips"]]
-
-    # Go through each tip in filtered_tips
+    
     for tip in filtered_tips:
-        # Check if the tip's ID is not in the list of shown tip IDs
         if tip["tip_id"] not in shown_tip_ids:
             new_tips.append(tip)  # Add the tip to the new_tips list
 
@@ -83,7 +74,6 @@ def handle_get_tips(request, session_id):
     # Update the session cache with the selected tips
     sessions[session_id]["shown_tips"].extend(selected_tips)
 
-    # Respond with the selected tips
     return {
         "tips": [
             {"tip_id": tip["tip_id"], "tip": tip["tip"], "link": tip["link"],
@@ -102,27 +92,21 @@ def handle_rate_tip(request, session_id):
     if 0 <= rating <= 5:
         try:
             cursor.execute("SELECT average_rating, rating_count FROM tips WHERE tip_id = ?", (tip_id,))
-            tip = cursor.fetchone()
-
+            tip = cursor.fetchone() # Used to test if tip has already been rated
             if tip:
-                # Check if the tip has already been rated in this session
                 if tip_id in sessions[session_id]["rated_tips"]:
                     return {"message": "You have already rated this tip",
                             "session_id": session_id}
 
-                # Calculate the new average rating
+                # Calculate the new average rating and update rate value
                 current_avg, count = tip
                 new_avg = ((current_avg * count) + rating) / (count + 1) if current_avg is not None else rating
                 new_count = count + 1
                 new_avg_rounded = round(new_avg, 2)
-
-                # Update the database with the new average and count
                 cursor.execute("""
                     UPDATE tips SET average_rating = ?, rating_count = ? WHERE tip_id = ?
                 """, (new_avg_rounded, new_count, tip_id))
                 conn.commit()
-
-                # Mark tip as rated
                 sessions[session_id]["rated_tips"].add(tip_id)
 
                 return {
@@ -145,13 +129,11 @@ def handle_rate_tip(request, session_id):
 # Handle get_tip_by_id operation
 def handle_get_tip_by_id(request, session_id):
     tip_id = request.get("tip_id")
-
     if not tip_id:
         return {"message": "Tip ID is required for this operation.", "session_id": session_id}
 
     cursor.execute("SELECT tip_id, tip, link, category, average_rating, rating_count FROM tips WHERE tip_id = ?", (tip_id,))
     tip = cursor.fetchone()
-
     if tip:
         return {
             "tip": {
@@ -209,15 +191,13 @@ def handle_delete_tip(request, session_id):
 
 # Handle requests
 while True:
-    # Receive a request
+    
     request = socket.recv_json()
     print("Received request:", request)
-
     operation = request.get("operation")
     response = {"message": "Invalid operation"}
 
     # Generate a session ID for each request. If not provided, it's a new session
-    # Not quite familiar enough with UUID - need to study further
     session_id = request.get("session_id") or str(uuid.uuid4())
 
     # Initialize session data if it's a new session
@@ -237,8 +217,7 @@ while True:
         response = handle_insert_tip(request, session_id)
     elif operation == "delete_tip":
         response = handle_delete_tip(request, session_id)
-
-    # Send the response
+        
     socket.send_json(response)
 
 
